@@ -1,0 +1,85 @@
+# =============================================================================
+# n8n full local stack for Docker Desktop
+# -----------------------------------------------------------------------------
+# Postgres (durable database) + n8n (workflow engine).
+# 100% local, lifetime free.
+#
+# Start:
+#   docker compose --env-file docker/.env.example -f docker/docker-compose.yml up -d
+#
+# Stop (keeps data):
+#   docker compose --env-file docker/.env.example -f docker/docker-compose.yml down
+# =============================================================================
+
+name: n8n-local-stack
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL - durable storage for workflows, executions and credentials.
+  # Replaces the embedded SQLite when N8N grows past a few hundred workflows.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-n8n_password}
+      POSTGRES_DB: ${POSTGRES_DB:-n8n}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # n8n - workflow automation engine
+  # ---------------------------------------------------------------------------
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      # --- Database backend ---
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-n8n}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-n8n_password}
+
+      # --- Core n8n settings ---
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      N8N_PORT: 5678
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-CHANGE_ME_TO_A_LONG_RANDOM_STRING}
+      TZ: ${TZ:-UTC}
+
+      # --- Basic login protection ---
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-false}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-change_me}
+
+      # --- Execution history retention (keep local disk small) ---
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    # Optional: allow n8n to reach local services running on the host
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+    name: n8n_postgres_data
+  n8n_data:
+    name: n8n_data

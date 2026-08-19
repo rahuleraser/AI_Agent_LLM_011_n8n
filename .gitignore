@@ -1,0 +1,16 @@
+# Local environment
+.env
+*.local
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Docker data (do not commit local volumes)
+~/.n8n/
+*.log

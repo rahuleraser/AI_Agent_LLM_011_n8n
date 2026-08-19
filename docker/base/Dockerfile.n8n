@@ -1,0 +1,68 @@
+# =============================================================================
+# n8n - Base Dockerfile (Lifetime-Free Self-Hosted Workflow Automation)
+# -----------------------------------------------------------------------------
+# Runs 100% on your local machine via Docker Desktop. No cloud dependency,
+# no subscription, no recurring fees. Fair-code license allows self-hosting
+# and commercial use of your own workflows for free.
+#
+# Build:
+#   docker build -f docker/base/Dockerfile.n8n -t n8n-base:latest docker/base
+#
+# Run:
+#   docker run -it --rm --name n8n -p 5678:5678 \
+#     -v ~/.n8n:/home/node/.n8n n8n-base:latest
+# =============================================================================
+
+# Official n8n community image (Node.js Alpine based, non-root)
+FROM n8nio/n8n:latest
+
+# -----------------------------------------------------------------------------
+# Community nodes
+# -----------------------------------------------------------------------------
+# n8n bundles 400+ integrations out of the box. Additional community nodes can
+# be installed from npm. Example below (uncomment what you need):
+#   cd /usr/local/lib/node_modules/n8n \
+#     && npm install n8n-nodes-whatsapp --save \
+#     && npm cache clean --force
+
+USER root
+
+# Use a locale-agnostic timezone so schedule/cron nodes behave predictably.
+ENV TZ=UTC
+
+# n8n core configuration (all editable at runtime via docker run -e)
+# --------------------------------------------------------------------------
+# N8N_PORT            - HTTP port n8n listens on (container internal, default 5678)
+# N8N_HOST            - hostname used when generating webhooks / editor URL
+# N8N_PROTOCOL        - http (local) or https (behind reverse proxy)
+# N8N_BASIC_AUTH_*    - enable a login gate so only you can reach the editor
+# N8N_ENCRYPTION_KEY  - stable secret that keeps credentials decryptable across restarts
+ENV N8N_PROTOCOL=http \
+    N8N_HOST=localhost \
+    N8N_PORT=5678 \
+    N8N_ENCRYPTION_KEY=CHANGE_ME_TO_A_LONG_RANDOM_STRING \
+    N8N_BASIC_AUTH_ACTIVE=false \
+    N8N_BASIC_AUTH_USER=admin \
+    N8N_BASIC_AUTH_PASSWORD=change_me
+
+# Expose n8n editor + webhook port
+EXPOSE 5678
+
+# Persist workflows/credentials here via a volume:
+#   -v ~/.n8n:/home/node/.n8n
+VOLUME ["/home/node/.n8n"]
+
+# Run as the non-root "node" user (default n8n image behaviour, more secure)
+USER node
+
+# n8n image default entrypoint + healthcheck
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# -----------------------------------------------------------------------------
+# How to keep it "Lifetime Free"
+# -----------------------------------------------------------------------------
+# 1. Self-host locally -> no per-seat/per-run SaaS charges.
+# 2. Use your own machine's resources -> no server rental.
+# 3. Everything is stored in the ~/.n8n volume -> no hidden cloud storage.
+# 4. The editor UI, scheduler, webhooks and built-in nodes are unlimited.
+# 5. For teams, keep using the free community edition on your own hardware.

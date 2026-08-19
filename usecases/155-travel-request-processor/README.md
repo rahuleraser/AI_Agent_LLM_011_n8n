@@ -1,0 +1,81 @@
+# 155 - Travel Request Processor
+
+> **Category:** HR & Internal Ops
+
+Processes travel requests and books approved trips. Runs fully on your local machine via Docker Desktop - lifetime free.
+
+## Architecture Diagram
+
+```mermaid
+flowchart TD
+    A["HR Trigger (Travel)"]
+    B["Validate Policy"]
+    C["Book Flight / Hotel"]
+    D["IF: Approved?"]
+    E["Send Policy Feedback"]
+    F["Update Travel Log"]
+    G["Notify Traveler"]
+    A --> B --> C --> D
+    D -- "Yes" --> E --> G
+    D -- "No" --> F --> G
+```
+
+## Key Nodes
+
+| Node | Purpose |
+|------|---------|
+| HR Trigger | Travel request |
+| Code | Policy check |
+| IF | Approval branch |
+| HTTP Request | Booking API |
+| Email | Itinerary send |
+| Google Sheets | Travel log |
+
+## Dockerfile
+
+Dockerfile: [usecases/155-travel-request-processor/Dockerfile](https://github.com/rahuleraser/AI_Agent_LLM_011_n8n/blob/main/usecases/155-travel-request-processor/Dockerfile)
+
+| Detail | Value |
+|--------|-------|
+| Base image | `n8nio/n8n:latest` |
+| Community nodes | None (built-in nodes) |
+| Exposed port | 5678 |
+| Persistence | `~/.n8n` volume |
+
+### Environment defaults
+
+- `TRAVEL_WEBHOOK_PATH=travel`
+
+## Build & Run
+
+```bash
+cd usecases/155-travel-request-processor
+
+# Build the image
+docker build -t n8n-usecase-155 .
+
+# Run on Docker Desktop
+docker run -d --name n8n-usecase-155 -p 5678:5678 \
+  -v ~/.n8n:/home/node/.n8n n8n-usecase-155
+
+# Open http://localhost:5678
+```
+
+## Docker Compose (optional)
+
+```yaml
+services:
+  n8n-usecase-155:
+    image: n8n-usecase-155
+    container_name: n8n-usecase-155
+    restart: unless-stopped
+    ports: ["5678:5678"]
+    volumes: ["n8n_usecase_155_data:/home/node/.n8n"]
+
+volumes:
+  n8n_usecase_155_data:
+```
+
+## Cost
+
+$0 - no n8n license, no cloud hosting. Uses your local resources only. Any third-party API you connect (e.g. Gmail, Slack) uses its own free tier.
